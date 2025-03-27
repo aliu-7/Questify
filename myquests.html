@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Quests | Questify</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      padding: 2rem;
+    }
+    nav {
+      background: #007bff;
+      color: white;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-around;
+      border-radius: 0 0 12px 12px;
+      margin-bottom: 2rem;
+    }
+    nav a {
+      color: white;
+      text-decoration: none;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+    .quest-card {
+      border: 1px solid #ddd;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+    }
+    .quest-card h3 {
+      margin-top: 0;
+    }
+    .quest-card small {
+      color: #666;
+    }
+    button {
+      margin-top: 0.8rem;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      background: #28a745;
+      color: white;
+      cursor: pointer;
+    }
+    .proof-input {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.5rem;
+      margin-bottom: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .streak {
+      font-weight: bold;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+    <nav>
+        <a href="home.html">🏠 Home</a>
+        <a href="myquests.html">📋 My Quests</a>
+        <a href="quests.html">🌍 Explore</a>
+        <a href="leaderboard.html">🏆 Leaderboard</a>
+        <a href="profile.html">👤 Profile</a>
+        <a href="create.html">➕ Create</a>
+        <a href="#" onclick="logout()">🚪 Logout</a>
+      </nav>
+
+  <div class="container">
+    <h2>🔥 My Active Quests</h2>
+    <div id="my-quests"></div>
+  </div>
+
+  <script>
+    const currentUser = JSON.parse(localStorage.getItem("questifyCurrentUser"));
+    if (!currentUser) {
+      window.location.href = "index.html";
+    }
+
+    function logout() {
+      localStorage.removeItem("questifyCurrentUser");
+      window.location.href = "index.html";
+    }
+
+    const allQuests = JSON.parse(localStorage.getItem("questifyAllQuests")) || [];
+    const joined = JSON.parse(localStorage.getItem("questifyJoinedQuests") || '{}');
+    const joinedIDs = joined[currentUser.email.toLowerCase()] || [];
+
+    function addToFeedPosts(post) {
+      const posts = JSON.parse(localStorage.getItem("questifyFeedPosts")) || [];
+      posts.push(post);
+      localStorage.setItem("questifyFeedPosts", JSON.stringify(posts));
+    }
+
+    function markProof(id) {
+      const today = new Date().toDateString();
+      const questIndex = allQuests.findIndex(q => q.id === id);
+      const quest = allQuests[questIndex];
+      const proofTextInput = document.querySelector(`[data-proof="${id}"]`);
+
+      if (!quest.history) quest.history = [];
+      if (!quest.streaks) quest.streaks = {};
+
+      if (quest.history.includes(today)) {
+        alert("You've already posted proof for today.");
+        return;
+      }
+
+      quest.history.push(today);
+      const userStreak = quest.streaks[currentUser.email.toLowerCase()] || 0;
+      const lastDate = quest.lastProofDate?.[currentUser.email.toLowerCase()];
+
+      const isNextDay = lastDate === new Date(Date.now() - 86400000).toDateString();
+      quest.streaks[currentUser.email.toLowerCase()] = isNextDay ? userStreak + 1 : 1;
+
+      if (!quest.lastProofDate) quest.lastProofDate = {};
+      quest.lastProofDate[currentUser.email.toLowerCase()] = today;
+
+      allQuests[questIndex] = quest;
+      localStorage.setItem("questifyAllQuests", JSON.stringify(allQuests));
+
+      addToFeedPosts({
+        user: currentUser.email.toLowerCase(),
+        username: currentUser.username,
+        questId: id,
+        questTitle: quest.title,
+        proofText: proofTextInput.value.trim(),
+        date: today,
+        votes: 0,
+        voters: {}
+      });
+
+      renderMyQuests();
+    }
+
+    function renderMyQuests() {
+      const container = document.getElementById("my-quests");
+      container.innerHTML = "";
+
+      const myQuests = allQuests.filter(q => joinedIDs.includes(q.id));
+
+      if (myQuests.length === 0) {
+        container.innerHTML = "<p>You haven't joined any quests yet.</p>";
+        return;
+      }
+
+      myQuests.forEach((q) => {
+        const card = document.createElement("div");
+        card.className = "quest-card";
+
+        const userStreak = q.streaks?.[currentUser.email.toLowerCase()] || 0;
+
+        card.innerHTML = `
+          <h3>${q.title}</h3>
+          <p>${q.desc}</p>
+          <input class="proof-input" type="text" placeholder="Write a quick proof post (optional)" data-proof="${q.id}" />
+          <button onclick="markProof('${q.id}')">Post Proof</button>
+          <div class="streak">🔥 Streak: ${userStreak} day(s)</div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    renderMyQuests();
+  </script>
+</body>
+</html>

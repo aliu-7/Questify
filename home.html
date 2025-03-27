@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Questify | Home</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f9fafc;
+      display: flex;
+    }
+    .sidebar {
+      width: 240px;
+      background: white;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem;
+      height: 100vh;
+    }
+    .sidebar h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: #007bff;
+      margin-bottom: 2.5rem;
+    }
+    .nav-item {
+      margin-bottom: 1.5rem;
+      font-size: 1rem;
+      color: #333;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .nav-item i {
+      margin-right: 0.75rem;
+      color: #007bff;
+    }
+    .nav-item:hover {
+      color: #007bff;
+    }
+    .progress-toggle {
+      margin-top: auto;
+      text-align: center;
+      padding: 0.5rem;
+      background: #007bff;
+      color: white;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .progress-panel {
+      margin-top: 1rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .progress-panel h3 {
+      font-size: 0.9rem;
+      margin: 0.5rem 0;
+      color: #333;
+    }
+    .progress-bar {
+      height: 10px;
+      border-radius: 6px;
+      background: #e0e0e0;
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #28a745;
+      width: 0%;
+    }
+    .main-content {
+      flex: 1;
+      padding: 2rem;
+      overflow-y: auto;
+    }
+    .main-content h2 {
+      margin-bottom: 1rem;
+      color: #333;
+    }
+    .feed-post {
+      background: white;
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+    .feed-post .top {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+      color: #333;
+    }
+    .feed-post .quest {
+      margin-top: 0.5rem;
+      font-style: italic;
+      color: #555;
+    }
+    .vote-btn {
+      margin-right: 0.5rem;
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h1>Questify</h1>
+    <div class="nav-item" onclick="navigateTo('profile.html')"><i class="fas fa-user"></i><span>Profile</span></div>
+    <div class="nav-item" onclick="navigateTo('home.html')"><i class="fas fa-house"></i><span>Home</span></div>
+    <div class="nav-item" onclick="navigateTo('join.html')"><i class="fas fa-plus-circle"></i><span>Join</span></div>
+    <div class="nav-item" onclick="navigateTo('leaderboard.html')"><i class="fas fa-trophy"></i><span>Leaderboard</span></div>
+    <div class="progress-toggle">Progress</div>
+    <div id="progressPanel" class="progress-panel active">
+      <h3>Health Quest (60%)</h3>
+      <div class="progress-bar"><div class="progress-fill" style="width: 60%"></div></div>
+      <h3>Academic Quest (40%)</h3>
+      <div class="progress-bar"><div class="progress-fill" style="width: 40%"></div></div>
+      <h3>Social Quest (10%)</h3>
+      <div class="progress-bar"><div class="progress-fill" style="width: 10%"></div></div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <h2>Your Feed</h2>
+    <div id="feed"></div>
+  </div>
+
+  <script>
+    const currentUser = JSON.parse(localStorage.getItem("questifyCurrentUser"));
+    if (!currentUser) window.location.href = "index.html";
+
+    function toggleProgress() {
+      document.getElementById("progressPanel").classList.toggle("active");
+    }
+
+    function navigateTo(page) {
+      window.location.href = page;
+    }
+
+    function renderFeed() {
+      const feedContainer = document.getElementById("feed");
+      feedContainer.innerHTML = "";
+      const posts = JSON.parse(localStorage.getItem("questifyFeedPosts")) || [];
+      const today = new Date().toDateString();
+
+      posts.filter(post => post.date === today).reverse().forEach((post, index) => {
+        const div = document.createElement("div");
+        div.className = "feed-post";
+        div.innerHTML = `
+          <div class="top">
+            <span>@${post.username}</span>
+            <span>${post.votes || 0} votes</span>
+          </div>
+          <div class="quest">Quest: ${post.questTitle}</div>
+          <p>${post.proofText}</p>
+          <div>
+            <span class="vote-btn" onclick="vote(${index}, 1)"><i class="fas fa-thumbs-up"></i></span>
+            <span class="vote-btn" onclick="vote(${index}, -1)"><i class="fas fa-thumbs-down"></i></span>
+          </div>
+        `;
+        feedContainer.appendChild(div);
+      });
+    }
+
+    function vote(index, delta) {
+      const posts = JSON.parse(localStorage.getItem("questifyFeedPosts")) || [];
+      const post = posts[index];
+      const user = currentUser.email.toLowerCase();
+
+      if (!post.voters) post.voters = {};
+      if (post.voters[user]) return alert("You already voted on this post.");
+
+      post.votes = (post.votes || 0) + delta;
+      post.voters[user] = delta;
+      localStorage.setItem("questifyFeedPosts", JSON.stringify(posts));
+      renderFeed();
+    }
+
+    renderFeed();
+  </script>
+</body>
+</html>

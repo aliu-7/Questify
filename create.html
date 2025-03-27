@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create a Quest | Questify</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 400px;
+      margin: auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+    input, textarea, button {
+      width: 100%;
+      margin-bottom: 1rem;
+      padding: 0.6rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    nav {
+      background: #007bff;
+      color: white;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-around;
+      border-radius: 0 0 12px 12px;
+    }
+    nav a {
+      color: white;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="home.html">🏠 Home</a>
+    <a href="myquests.html">📋 My Quests</a>
+    <a href="quests.html">🌍 Explore</a>
+    <a href="leaderboard.html">🏆 Leaderboard</a>
+    <a href="profile.html">👤 Profile</a>
+    <a href="create.html">➕ Create</a>
+  </nav>
+
+  <div class="container">
+    <h2>Create a New Quest</h2>
+    <form id="create-form">
+      <input type="text" id="title" placeholder="Quest Title" required />
+      <textarea id="desc" placeholder="Quest Description" required></textarea>
+      <input type="text" id="tasks" placeholder="Tasks (comma-separated)" required />
+      <button type="submit">Create Quest</button>
+    </form>
+  </div>
+
+  <script>
+    const currentUser = JSON.parse(localStorage.getItem("questifyCurrentUser"));
+    if (!currentUser) window.location.href = "index.html";
+
+    const form = document.getElementById("create-form");
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const title = document.getElementById("title").value.trim();
+      const desc = document.getElementById("desc").value.trim();
+      const tasks = document.getElementById("tasks").value.trim().split(",").map(t => ({ text: t.trim(), done: false }));
+
+      const quest = {
+        id: "quest-" + Date.now(),
+        title,
+        desc,
+        tasks,
+        createdBy: currentUser.email.toLowerCase(),
+        public: true,
+        history: [],
+        streaks: {},
+        lastProofDate: {}
+      };
+
+      const all = JSON.parse(localStorage.getItem("questifyAllQuests")) || [];
+      all.push(quest);
+      localStorage.setItem("questifyAllQuests", JSON.stringify(all));
+
+      window.location.href = "quests.html";
+    });
+  </script>
+</body>
+</html>

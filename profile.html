@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Questify | Profile</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f9fafc;
+      display: flex;
+    }
+    .sidebar {
+      width: 240px;
+      background: white;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem;
+      height: 100vh;
+    }
+    .sidebar h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: #007bff;
+      margin-bottom: 2.5rem;
+    }
+    .nav-item {
+      margin-bottom: 1.5rem;
+      font-size: 1rem;
+      color: #333;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .nav-item i {
+      margin-right: 0.75rem;
+      color: #007bff;
+    }
+    .nav-item:hover {
+      color: #007bff;
+    }
+    .progress-toggle {
+      margin-top: auto;
+      text-align: center;
+      padding: 0.5rem;
+      background: #007bff;
+      color: white;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .progress-panel {
+      margin-top: 1rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .progress-panel h3 {
+      font-size: 0.9rem;
+      margin: 0.5rem 0;
+      color: #333;
+    }
+    .progress-bar {
+      height: 10px;
+      border-radius: 6px;
+      background: #e0e0e0;
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #28a745;
+      width: 0%;
+    }
+    .main-content {
+      flex: 1;
+      padding: 2rem;
+      overflow-y: auto;
+    }
+    .profile-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .joined-quests {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 1rem;
+    }
+    .quest-card {
+      background: white;
+      padding: 1rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    .friends-section {
+      margin-top: 3rem;
+    }
+    input[type="email"] {
+      padding: 0.5rem;
+      width: calc(100% - 1rem);
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h1>Questify</h1>
+    <div class="nav-item" onclick="navigateTo('profile.html')"><i class="fas fa-user"></i><span>Profile</span></div>
+    <div class="nav-item" onclick="navigateTo('home.html')"><i class="fas fa-house"></i><span>Home</span></div>
+    <div class="nav-item" onclick="navigateTo('join.html')"><i class="fas fa-plus-circle"></i><span>Join</span></div>
+    <div class="nav-item" onclick="navigateTo('leaderboard.html')"><i class="fas fa-trophy"></i><span>Leaderboard</span></div>
+    <div class="progress-toggle">Progress</div>
+    <div id="progressPanel" class="progress-panel active">
+      <h3>Health Quest (60%)</h3>
+      <div class="progress-bar"><div class="progress-fill" style="width: 60%"></div></div>
+      <h3>Academic Quest (40%)</h3>
+      <div class="progress-bar"><div class="progress-fill" style="width: 40%"></div></div>
+      <h3>Social Quest (10%)</h3>
+      <div class="progress-bar"><div class="progress-fill" style="width: 10%"></div></div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="profile-header" id="profile-info"></div>
+    <h3>Joined Quests</h3>
+    <div class="joined-quests" id="joined-quests"></div>
+
+    <div class="friends-section">
+      <h3>Friends</h3>
+      <input type="email" id="friend-email" placeholder="Add friend by email...">
+      <button onclick="addFriend()">Add Friend</button>
+      <ul id="friends-list"></ul>
+    </div>
+  </div>
+
+  <script>
+    const currentUser = JSON.parse(localStorage.getItem("questifyCurrentUser"));
+    if (!currentUser) window.location.href = "index.html";
+
+    function logout() {
+      localStorage.removeItem("questifyCurrentUser");
+      window.location.href = "index.html";
+    }
+
+    function navigateTo(page) {
+      window.location.href = page;
+    }
+
+    function loadProfile() {
+      document.getElementById("profile-info").innerHTML = `
+        <h2>${currentUser.username}</h2>
+        <p>${currentUser.email}</p>
+      `;
+    }
+
+    function renderJoinedQuests() {
+      const allQuests = JSON.parse(localStorage.getItem("questifyAllQuests")) || [];
+      const joined = JSON.parse(localStorage.getItem("questifyJoinedQuests") || '{}');
+      const joinedIDs = joined[currentUser.email.toLowerCase()] || [];
+      const joinedContainer = document.getElementById("joined-quests");
+      joinedContainer.innerHTML = "";
+
+      const myQuests = allQuests.filter(q => joinedIDs.includes(q.id));
+      if (myQuests.length === 0) {
+        joinedContainer.innerHTML = "<p>You haven't joined any quests yet.</p>";
+        return;
+      }
+      myQuests.forEach(q => {
+        const card = document.createElement("div");
+        card.className = "quest-card";
+        card.innerHTML = `
+          <strong>${q.title}</strong>
+          <p>${q.desc}</p>
+        `;
+        joinedContainer.appendChild(card);
+      });
+    }
+
+    function addFriend() {
+      const email = document.getElementById("friend-email").value.trim().toLowerCase();
+      if (!email || email === currentUser.email.toLowerCase()) {
+        alert("Enter a valid email that isn't your own.");
+        return;
+      }
+      const allFriends = JSON.parse(localStorage.getItem("questifyFriends")) || {};
+      const myEmail = currentUser.email.toLowerCase();
+      if (!allFriends[myEmail]) allFriends[myEmail] = [];
+      if (!allFriends[myEmail].includes(email)) {
+        allFriends[myEmail].push(email);
+        localStorage.setItem("questifyFriends", JSON.stringify(allFriends));
+        document.getElementById("friend-email").value = "";
+        renderFriends();
+      } else {
+        alert("You're already friends with this user.");
+      }
+    }
+
+    function renderFriends() {
+      const friendsList = document.getElementById("friends-list");
+      friendsList.innerHTML = "";
+      const allFriends = JSON.parse(localStorage.getItem("questifyFriends")) || {};
+      const myFriends = allFriends[currentUser.email.toLowerCase()] || [];
+      if (myFriends.length === 0) {
+        friendsList.innerHTML = "<li>No friends yet.</li>";
+        return;
+      }
+      myFriends.forEach(email => {
+        const li = document.createElement("li");
+        li.textContent = email;
+        friendsList.appendChild(li);
+      });
+    }
+
+    loadProfile();
+    renderJoinedQuests();
+    renderFriends();
+  </script>
+</body>
+</html>

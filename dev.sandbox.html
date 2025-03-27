@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Questify Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      display: flex;
+      justify-content: center;
+      padding-top: 40px;
+    }
+    .container {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+      width: 360px;
+    }
+    input, textarea, button {
+      width: 100%;
+      margin-bottom: 0.8rem;
+      padding: 0.5rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    #quests li {
+      background: #f0f0f0;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      border-radius: 8px;
+    }
+    #quests label {
+      display: block;
+      margin: 0.25rem 0;
+    }
+    .logout {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 0.6rem;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 id="welcome-message">Welcome!</h2>
+
+    <form id="quest-form">
+      <h3>Create a Quest</h3>
+      <input type="text" id="quest-title" placeholder="Quest Title" required />
+      <textarea id="quest-desc" placeholder="Quest Description" required></textarea>
+      <input type="text" id="quest-tasks" placeholder="Tasks (comma-separated)" required />
+      <button type="submit">Add Quest</button>
+    </form>
+
+    <ul id="quests"></ul>
+
+    <button class="logout" onclick="logout()">Sign Out</button>
+  </div>
+
+  <script>
+    let editingIndex = null;
+
+    const currentUser = JSON.parse(localStorage.getItem("questifyCurrentUser"));
+    if (!currentUser) {
+      window.location.href = "index.html";
+    }
+
+    document.getElementById("welcome-message").textContent = "Welcome, " + currentUser.username + "!";
+
+    function getQuests() {
+      const all = JSON.parse(localStorage.getItem("questifyQuests")) || {};
+      return all[currentUser.email.toLowerCase()] || [];
+    }
+
+    function saveQuests(quests) {
+        const all = JSON.parse(localStorage.getItem("questifyQuests")) || {};
+        all[currentUser.email.toLowerCase()] = quests;
+        localStorage.setItem("questifyQuests", JSON.stringify(all));
+    }
+
+
+    function renderStreakCalendar(history) {
+      const days = [];
+      const today = new Date();
+
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const label = d.toLocaleDateString(undefined, { weekday: 'short' }).substring(0, 2);
+        const dateStr = d.toDateString();
+        const completed = history.includes(dateStr);
+        days.push(`<div style="
+          display: inline-block;
+          width: 24px;
+          height: 24px;
+          margin: 2px;
+          background: ${completed ? '#28a745' : '#ccc'};
+          color: white;
+          font-size: 12px;
+          text-align: center;
+          line-height: 24px;
+          border-radius: 4px;
+        ">${label}</div>`);
+      }
+
+      return `<div style="margin: 0.5rem 0;">${days.join("")}</div>`;
+    }
+
+    function renderQuests() {
+      const quests = getQuests();
+      const questList = document.getElementById("quests");
+      questList.innerHTML = "";
+
+      quests.forEach((q, index) => {
+        const li = document.createElement("li");
+        const completedToday = q.lastCompleted === new Date().toDateString();
+        const taskHTML = Array.isArray(q.tasks)
+          ? q.tasks.map((task, i) => `
+              <label>
+                <input type="checkbox" ${task.done ? "checked" : ""} onchange="toggleTask(${index}, ${i})" />
+                ${task.text}
+              </label>
+            `).join("")
+          : "<p style='color:red;'>⚠️ This quest is missing tasks.</p>";
+
+        const calendarHTML = renderStreakCalendar(q.history || []);
+
+        li.innerHTML = `
+          <strong>${q.title}</strong><br>
+          ${q.desc}<br><br>
+          ${taskHTML}<br><br>
+          ${calendarHTML}
+          🔥 Streak: ${q.streakCount} day(s)<br>
+          ${completedToday
+            ? "<span style='color: green;'>✅ Completed today</span>"
+            : `<button onclick="markQuestCompleted(${index})" ${q.tasks.every(t => t.done) ? "" : "disabled"}>Mark as Completed</button>`}
+          <br><br>
+          <button onclick="editQuest(${index})" style="background: #ffc107; color: black;">✏️ Edit Quest</button><br><br>
+          <button onclick="deleteQuest(${index})" style="background: #dc3545; color: white;">🗑 Delete Quest</button>
+        `;
+
+        questList.appendChild(li);
+      });
+    }
+
+    function createQuest(event) {
+      event.preventDefault();
+      const title = document.getElementById("quest-title").value.trim();
+      const desc = document.getElementById("quest-desc").value.trim();
+      const taskStr = document.getElementById("quest-tasks").value.trim();
+      if (!title || !desc || !taskStr) return;
+
+      const tasks = taskStr.split(",").map(t => ({ text: t.trim(), done: false }));
+      const quests = getQuests();
+
+      if (editingIndex !== null) {
+        const existing = quests[editingIndex];
+        existing.title = title;
+        existing.desc = desc;
+        existing.tasks = tasks;
+        quests[editingIndex] = existing;
+        editingIndex = null;
+        document.querySelector("#quest-form button[type='submit']").textContent = "Add Quest";
+      } else {
+        const newQuest = {
+          title,
+          desc,
+          tasks,
+          streakCount: 0,
+          lastCompleted: null,
+          history: []
+        };
+        quests.push(newQuest);
+      }
+
+      saveQuests(quests);
+      renderQuests();
+      event.target.reset();
+    }
+
+    function editQuest(index) {
+      const quest = getQuests()[index];
+      document.getElementById("quest-title").value = quest.title;
+      document.getElementById("quest-desc").value = quest.desc;
+      document.getElementById("quest-tasks").value = quest.tasks.map(t => t.text).join(", ");
+      editingIndex = index;
+      document.querySelector("#quest-form button[type='submit']").textContent = "Update Quest";
+      document.getElementById("quest-form").scrollIntoView({ behavior: "smooth" });
+    }
+
+    function toggleTask(qIndex, tIndex) {
+      const quests = getQuests();
+      quests[qIndex].tasks[tIndex].done = !quests[qIndex].tasks[tIndex].done;
+      saveQuests(quests);
+      renderQuests();
+    }
+
+    function isNextDay(dateStr) {
+      const yesterday = new Date(Date.now() - 86400000).toDateString();
+      return dateStr === yesterday;
+    }
+
+    function markQuestCompleted(index) {
+      const quests = getQuests();
+      const quest = quests[index];
+      const today = new Date().toDateString();
+
+      if (quest.lastCompleted === today) {
+        alert("Already marked today.");
+        return;
+      }
+
+      if (!quest.tasks.every(t => t.done)) {
+        alert("Complete all tasks first.");
+        return;
+      }
+
+      quest.streakCount = isNextDay(quest.lastCompleted)
+        ? quest.streakCount + 1
+        : 1;
+      quest.lastCompleted = today;
+      quest.tasks.forEach(t => (t.done = false));
+
+      if (!quest.history) quest.history = [];
+      if (!quest.history.includes(today)) quest.history.push(today);
+
+      saveQuests(quests);
+      renderQuests();
+    }
+
+    function deleteQuest(index) {
+        if (!confirm("Are you sure you want to delete this quest?")) return;
+
+        const quests = getQuests();              // get current user's quests
+        quests.splice(index, 1);                 // remove the quest at index
+        saveQuests(quests);                      // save updated list
+        editingIndex = null;                     // reset editing mode if active
+        document.querySelector("#quest-form button[type='submit']").textContent = "Add Quest"; // reset button
+        renderQuests();                          // re-render updated list
+        }
+
+
+    function checkDailyReset() {
+      const today = new Date().toDateString();
+      const lastOpen = localStorage.getItem("questifyLastOpened");
+
+      if (lastOpen !== today) {
+        const allQuests = JSON.parse(localStorage.getItem("questifyQuests")) || {};
+        const userEmail = currentUser.email.toLowerCase();
+        const quests = allQuests[userEmail] || [];
+
+        quests.forEach(quest => {
+          if (Array.isArray(quest.tasks)) {
+            quest.tasks.forEach(task => {
+              task.done = false;
+            });
+          }
+        });
+
+        allQuests[userEmail] = quests;
+        localStorage.setItem("questifyQuests", JSON.stringify(allQuests));
+      }
+
+      localStorage.setItem("questifyLastOpened", today);
+    }
+
+    function logout() {
+      localStorage.removeItem("questifyCurrentUser");
+      window.location.href = "index.html";
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("quest-form").addEventListener("submit", createQuest);
+      checkDailyReset();
+      renderQuests();
+    });
+  </script>
+</body>
+
+<nav style="background: #007bff; color: white; padding: 1rem; display: flex; justify-content: space-around; border-radius: 0 0 12px 12px;">
+  <a href="home.html" style="color: white; text-decoration: none;">🏠 Home</a>
+  <a href="myquests.html" style="color: white; text-decoration: none;">📋 My Quests</a>
+  <a href="quests.html" style="color: white; text-decoration: none;">🌍 Explore</a>
+  <a href="leaderboard.html" style="color: white; text-decoration: none;">🏆 Leaderboard</a>
+  <a href="profile.html" style="color: white; text-decoration: none;">👤 Profile</a>
+  <a href="create.html" style="color: white; text-decoration: none;">➕ Create</a>
+</nav>
+
+</html>

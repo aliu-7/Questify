@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Questify | Leaderboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f9fafc;
+      display: flex;
+    }
+    .sidebar {
+      width: 240px;
+      background: white;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem;
+      height: 100vh;
+    }
+    .sidebar h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: #007bff;
+      margin-bottom: 2.5rem;
+    }
+    .nav-item {
+      margin-bottom: 1.5rem;
+      font-size: 1rem;
+      color: #333;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .nav-item i {
+      margin-right: 0.75rem;
+      color: #007bff;
+    }
+    .nav-item:hover {
+      color: #007bff;
+    }
+    .progress-toggle {
+      margin-top: auto;
+      text-align: center;
+      padding: 0.5rem;
+      background: #007bff;
+      color: white;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .progress-panel {
+      margin-top: 1rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .progress-panel h3 {
+      font-size: 0.9rem;
+      margin: 0.5rem 0;
+      color: #333;
+    }
+    .progress-bar {
+      height: 10px;
+      border-radius: 6px;
+      background: #e0e0e0;
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #28a745;
+      width: 0%;
+    }
+    .main-content {
+      flex: 1;
+      padding: 2rem;
+      overflow-y: auto;
+    }
+    .main-content h2 {
+      margin-bottom: 1rem;
+      color: #333;
+    }
+    select {
+      margin-bottom: 1rem;
+      padding: 0.5rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+    .leaderboard-entry {
+      background: white;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h1>Questify</h1>
+    <div class="nav-item" onclick="navigateTo('profile.html')"><i class="fas fa-user"></i><span>Profile</span></div>
+    <div class="nav-item" onclick="navigateTo('home.html')"><i class="fas fa-house"></i><span>Home</span></div>
+    <div class="nav-item" onclick="navigateTo('join.html')"><i class="fas fa-plus-circle"></i><span>Join</span></div>
+    <div class="nav-item" onclick="navigateTo('leaderboard.html')"><i class="fas fa-trophy"></i><span>Leaderboard</span></div>
+    <div class="progress-toggle">Progress</div>
+    <div id="progressPanel" class="progress-panel active">
+      <h3>Health Quest (60%)</h3>
+      <div class="progress-bar"><div class="progress-fill" style="width: 60%"></div></div>
+      <h3>Academic Quest (40%)</h3>
+      <div class="progress-bar"><div class="progress-fill" style="width: 40%"></div></div>
+      <h3>Social Quest (10%)</h3>
+      <div class="progress-bar"><div class="progress-fill" style="width: 10%"></div></div>
+    </div>
+  </div>
+  <div class="main-content">
+    <h2>Leaderboard</h2>
+    <select id="filter" onchange="renderLeaderboard()">
+      <option value="global">Global</option>
+      <option value="weekly">This Week</option>
+      <option value="friends">Friends</option>
+    </select>
+    <div id="leaderboard"></div>
+  </div>
+  <script>
+    const currentUser = JSON.parse(localStorage.getItem("questifyCurrentUser"));
+    if (!currentUser) window.location.href = "index.html";
+
+    function navigateTo(page) {
+      window.location.href = page;
+    }
+
+    function getWeekStartDate() {
+      const now = new Date();
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      return new Date(now.setDate(diff)).toDateString();
+    }
+
+    function isThisWeek(dateStr) {
+      const postDate = new Date(dateStr);
+      const weekStart = new Date(getWeekStartDate());
+      return postDate >= weekStart;
+    }
+
+    function renderLeaderboard() {
+      const filter = document.getElementById("filter").value;
+      const leaderboard = document.getElementById("leaderboard");
+      leaderboard.innerHTML = "";
+
+      const allPosts = JSON.parse(localStorage.getItem("questifyFeedPosts")) || [];
+      const userScores = {};
+      const friends = JSON.parse(localStorage.getItem("questifyFriends") || '{}')[currentUser.email.toLowerCase()] || [];
+
+      allPosts.forEach(post => {
+        const isFriend = friends.includes(post.user);
+        const isThisUser = post.user === currentUser.email.toLowerCase();
+        const isWeekly = isThisWeek(post.date);
+
+        if (
+          (filter === "global") ||
+          (filter === "weekly" && isWeekly) ||
+          (filter === "friends" && (isFriend || isThisUser))
+        ) {
+          if (!userScores[post.user]) {
+            userScores[post.user] = {
+              username: post.username,
+              votes: 0,
+              posts: 0
+            };
+          }
+          userScores[post.user].votes += post.votes || 0;
+          userScores[post.user].posts += 1;
+        }
+      });
+
+      const sorted = Object.entries(userScores)
+        .sort((a, b) => b[1].votes - a[1].votes)
+        .slice(0, 10);
+
+      if (sorted.length === 0) {
+        leaderboard.innerHTML = '<p style="text-align:center;">No data to display.</p>';
+        return;
+      }
+
+      sorted.forEach(([email, data], index) => {
+        const div = document.createElement("div");
+        div.className = "leaderboard-entry";
+        div.innerHTML = `
+          <span><strong>#${index + 1}</strong> @${data.username}</span>
+          <span>${data.votes} votes</span>
+        `;
+        leaderboard.appendChild(div);
+      });
+    }
+
+    renderLeaderboard();
+  </script>
+</body>
+</html>

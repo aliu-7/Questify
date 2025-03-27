@@ -1,0 +1,124 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Public Quests | Questify</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+    .quest-card {
+      border: 1px solid #ddd;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+    }
+    .quest-card h3 {
+      margin-top: 0;
+    }
+    .quest-card small {
+      color: #666;
+    }
+    button {
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: gray;
+    }
+    .joined-label {
+      display: inline-block;
+      background: #28a745;
+      color: white;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <nav style="background: #007bff; color: white; padding: 1rem; display: flex; justify-content: space-around; border-radius: 0 0 12px 12px;">
+    <a href="home.html" style="color: white; text-decoration: none;">🏠 Home</a>
+    <a href="myquests.html" style="color: white; text-decoration: none;">📋 My Quests</a>
+    <a href="quests.html" style="color: white; text-decoration: none;">🌍 Explore</a>
+    <a href="leaderboard.html" style="color: white; text-decoration: none;">🏆 Leaderboard</a>
+    <a href="profile.html" style="color: white; text-decoration: none;">👤 Profile</a>
+    <a href="create.html" style="color: white; text-decoration: none;">➕ Create</a>
+  </nav>
+  <div class="container">
+    <h2>🌍 Public Quests</h2>
+    <div id="quest-list"></div>
+  </div>
+
+  <script>
+    const currentUser = JSON.parse(localStorage.getItem("questifyCurrentUser"));
+    if (!currentUser) {
+      window.location.href = "index.html";
+    }
+
+    const allQuests = JSON.parse(localStorage.getItem("questifyAllQuests")) || [];
+    const joined = JSON.parse(localStorage.getItem("questifyJoinedQuests") || '{}');
+    const joinedIDs = joined[currentUser.email.toLowerCase()] || [];
+
+    function saveJoinedQuests(ids) {
+      joined[currentUser.email.toLowerCase()] = ids;
+      localStorage.setItem("questifyJoinedQuests", JSON.stringify(joined));
+    }
+
+    function joinQuest(id) {
+      if (!joinedIDs.includes(id)) {
+        joinedIDs.push(id);
+        saveJoinedQuests(joinedIDs);
+        renderQuests();
+      }
+    }
+
+    function renderQuests() {
+      const list = document.getElementById("quest-list");
+      list.innerHTML = "";
+
+      if (allQuests.length === 0) {
+        list.innerHTML = "<p>No public quests yet!</p>";
+        return;
+      }
+
+      allQuests.forEach((quest) => {
+        const card = document.createElement("div");
+        card.className = "quest-card";
+
+        const isJoined = joinedIDs.includes(quest.id);
+
+        card.innerHTML = `
+          <h3>${quest.title}</h3>
+          <p>${quest.desc}</p>
+          <small>Created by: ${quest.createdBy}</small><br>
+          ${isJoined
+            ? `<span class="joined-label">Already Joined</span>`
+            : `<button onclick="joinQuest('${quest.id}')">Join Quest</button>`
+          }
+        `;
+
+        list.appendChild(card);
+      });
+    }
+
+    renderQuests();
+  </script>
+</body>
+</html> -->
